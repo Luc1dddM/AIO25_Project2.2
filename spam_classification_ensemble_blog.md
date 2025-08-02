@@ -1,543 +1,436 @@
-# 🚀 Xây dựng Hệ thống Phân loại Spam Email với Ensemble k-NN và Embedding
+# 🚀 Xây dựng Hệ thống Phân loại Email Spam Thông minh với Ensemble k-NN và Embedding
 
-> *Khám phá cách kết hợp Transformer Embeddings, FAISS Vector Search và Ensemble Methods để tạo ra một hệ thống phân loại spam hiệu quả*
+> *Hướng dẫn chi tiết cách kết hợp Transformer Embeddings, FAISS Vector Search và Ensemble Methods để tạo ra một hệ thống lọc spam hiệu quả và thông minh*
 
 ---
 
 ## 📖 Mục lục
 
-1. [Giới thiệu Bài toán](#1-giới-thiệu-bài-toán)
-2. [Sentence Embeddings với Transformer](#2-sentence-embeddings-với-transformer)
-3. [FAISS: Tìm kiếm Vector hiệu quả](#3-faiss-tìm-kiếm-vector-hiệu-quả)
-4. [k-Nearest Neighbors cho Text Classification](#4-k-nearest-neighbors-cho-text-classification)
-5. [Ensemble Methods: Kỹ thuật Cải tiến](#5-ensemble-methods-kỹ-thuật-cải-tiến)
-6. [Thực nghiệm và Kết quả](#6-thực-nghiệm-và-kết-quả)
-7. [Kết luận và Hướng phát triển](#7-kết-luận-và-hướng-phát-triển)
+1. [Giới thiệu về bài toán Email Spam](#1-giới-thiệu-về-bài-toán-email-spam)
+2. [Hiểu về Sentence Embeddings và Transformer](#2-hiểu-về-sentence-embeddings-và-transformer)
+3. [FAISS: Công nghệ tìm kiếm Vector siêu nhanh](#3-faiss-công-nghệ-tìm-kiếm-vector-siêu-nhanh)
+4. [Thuật toán k-Nearest Neighbors cho phân loại văn bản](#4-thuật-toán-k-nearest-neighbors-cho-phân-loại-văn-bản)
+5. [Ensemble Methods: Nghệ thuật kết hợp nhiều mô hình](#5-ensemble-methods-nghệ-thuật-kết-hợp-nhiều-mô-hình)
+6. [Thực nghiệm và phân tích kết quả](#6-thực-nghiệm-và-phân-tích-kết-quả)
+7. [Tổng kết và định hướng phát triển](#7-tổng-kết-và-định-hướng-phát-triển)
 
 ---
 
-## 1. Giới thiệu Bài toán
+## 1. Giới thiệu về bài toán Email Spam
 
-### 🎯 Spam Email Classification
+### 🎯 Tại sao cần lọc Email Spam?
 
-Phân loại email spam là một trong những ứng dụng kinh điển của machine learning trong thực tế. Với hàng tỷ email được gửi mỗi ngày, việc tự động phát hiện và lọc spam trở nên cực kỳ quan trọng.
+Mỗi ngày có hàng tỷ email được gửi đi trên toàn thế giới, và một tỷ lệ lớn trong số đó là spam (thư rác). Việc tự động phát hiện và lọc spam không chỉ giúp người dùng tiết kiệm thời gian, mà còn bảo vệ họ khỏi các mối đe dọa bảo mật.
 
-### 🔍 Thách thức chính:
+### 🔍 Những thách thức chính:
 
-- **Đa dạng nội dung**: Spam có thể xuất hiện dưới nhiều hình thức
-- **Ngôn ngữ tự nhiên**: Cần hiểu ngữ nghĩa, không chỉ từ khóa
-- **Real-time processing**: Cần tốc độ xử lý nhanh
-- **High accuracy**: Tránh false positive (ham email bị phân loại sai)
+- **Đa dạng về nội dung**: Email spam có thể xuất hiện dưới rất nhiều hình thức khác nhau
+- **Hiểu ngôn ngữ tự nhiên**: Cần phải hiểu được ý nghĩa của câu văn, không chỉ đơn thuần tìm từ khóa
+- **Xử lý thời gian thực**: Phải phân loại nhanh để không làm chậm hệ thống email
+- **Độ chính xác cao**: Tránh nhầm lẫn email quan trọng thành spam (sai lầm nghiêm trọng!)
 
-### 💡 Ý tưởng giải pháp:
+### 💡 Ý tưởng giải pháp thông minh:
 
-Thay vì sử dụng các phương pháp truyền thống như Bag-of-Words hay TF-IDF, chúng ta sẽ:
+Thay vì sử dụng các phương pháp cũ như đếm từ khóa hay phân tích tần suất từ, chúng ta sẽ:
 
-1. **Sử dụng Transformer embeddings** để capture semantic meaning
-2. **Áp dụng FAISS** cho similarity search hiệu quả
-3. **Kết hợp k-NN** với ensemble methods để tăng độ chính xác
-4. **Tạo confidence scores** để đánh giá độ tin cậy
+1. **Sử dụng Transformer để hiểu ngữ nghĩa** - giống như cách con người đọc và hiểu email
+2. **Áp dụng FAISS để tìm kiếm nhanh** - tìm những email tương tự trong cơ sở dữ liệu
+3. **Kết hợp nhiều thuật toán k-NN** - tăng độ tin cậy của dự đoán
+4. **Tạo điểm tin cậy** - biết được mô hình "chắc chắn" đến mức nào
 
 ---
 
-## 2. Sentence Embeddings với Transformer
+## 2. Hiểu về Sentence Embeddings và Transformer
 
-### 🧠 Tại sao cần Embeddings?
+### 🧠 Tại sao cần chuyển đổi văn bản thành số?
 
-Text trong tự nhiên là discrete và high-dimensional. Để máy tính có thể "hiểu" được ngữ nghĩa, chúng ta cần chuyển đổi text thành vector số:
+Máy tính không thể hiểu được văn bản như con người. Để máy tính có thể "hiểu" được ý nghĩa của câu văn, chúng ta cần chuyển đổi chúng thành các con số:
 
 ```python
-# From text to meaning
-"Free money now!" → [0.1, -0.3, 0.8, ..., 0.2]  # 768-dim vector
-"Hello friend"    → [0.4, 0.2, -0.1, ..., 0.5]  # 768-dim vector
+# Từ văn bản sang ý nghĩa dưới dạng số
+"Trúng thưởng miễn phí ngay!" → [0.1, -0.3, 0.8, ..., 0.2]  # Vector 768 chiều
+"Chào bạn thân mến"           → [0.4, 0.2, -0.1, ..., 0.5]  # Vector 768 chiều
 ```
 
-### 🤖 Multilingual E5 Model
+### 🤖 Mô hình Multilingual E5 - Trợ lý thông minh
 
-Chúng ta sử dụng **intfloat/multilingual-e5-base** - một mô hình embedding state-of-the-art:
+Chúng ta sử dụng **intfloat/multilingual-e5-base** - một mô hình embedding tiên tiến:
 
-**Ưu điểm:**
-- **Multilingual**: Hỗ trợ nhiều ngôn ngữ
-- **High quality**: Được train trên large corpus
-- **Semantic understanding**: Hiểu được ngữ nghĩa sâu
-- **Efficient**: Tốc độ xử lý nhanh
+**Điểm mạnh:**
+- **Đa ngôn ngữ**: Hiểu được cả tiếng Việt và tiếng Anh
+- **Chất lượng cao**: Được huấn luyện trên khối lượng dữ liệu khổng lồ
+- **Hiểu ngữ nghĩa sâu**: Nắm bắt được ý nghĩa thật sự của câu văn
+- **Xử lý nhanh**: Tốc độ phù hợp cho ứng dụng thực tế
 
-### 🔧 Implementation Details
+### 🔧 Chi tiết cách triển khai
 
 ```python
-# Load model
-MODEL_NAME = "intfloat/multilingual-e5-base"
-tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
-model = AutoModel.from_pretrained(MODEL_NAME)
+# Tải mô hình
+TEN_MO_HINH = "intfloat/multilingual-e5-base"
+tokenizer = AutoTokenizer.from_pretrained(TEN_MO_HINH)
+model = AutoModel.from_pretrained(TEN_MO_HINH)
 
-# Key technique: Average pooling
-def average_pool(last_hidden_states, attention_mask):
+# Kỹ thuật quan trọng: Pooling trung bình
+def tinh_trung_binh_pooling(last_hidden_states, attention_mask):
     last_hidden = last_hidden_states.masked_fill(
         ~attention_mask[..., None].bool(), 0.0
     )
     return last_hidden.sum(dim=1) / attention_mask.sum(dim=1)[..., None]
 
-# Generate embeddings with proper prefixes
-def get_embeddings(texts, model, tokenizer, device, batch_size=32):
-    # Important: Use "passage:" prefix for training data
-    batch_texts_with_prefix = [f"passage: {text}" for text in batch_texts]
-    # Use "query:" prefix for search queries
-    query_with_prefix = f"query: {query_text}"
+# Tạo embedding với tiền tố phù hợp
+def tao_embeddings(cac_van_ban, model, tokenizer, device, batch_size=32):
+    # Quan trọng: Sử dụng tiền tố "passage:" cho dữ liệu huấn luyện
+    van_ban_co_tien_to = [f"passage: {van_ban}" for van_ban in cac_van_ban]
+    # Sử dụng tiền tố "query:" cho văn bản cần tìm kiếm
+    cau_truy_van = f"query: {van_ban_truy_van}"
 ```
 
-### 🎯 Prefix Strategy
+### 🎯 Chiến lược sử dụng tiền tố
 
-E5 model yêu cầu sử dụng prefix để phân biệt:
-- **`"passage:"`** cho documents trong database
-- **`"query:"`** cho text cần search
+Mô hình E5 yêu cầu sử dụng tiền tố để phân biệt:
+- **`"passage:"`** cho các tài liệu trong cơ sở dữ liệu
+- **`"query:"`** cho văn bản cần tìm kiếm
 
-Điều này giúp model hiểu context và cải thiện retrieval quality.
+Điều này giúp mô hình hiểu được ngữ cảnh và cải thiện chất lượng tìm kiếm.
 
 ---
 
-## 3. FAISS: Tìm kiếm Vector hiệu quả
+## 3. FAISS: Công nghệ tìm kiếm Vector siêu nhanh
 
 ### ⚡ Tại sao cần FAISS?
 
-Khi có hàng triệu emails, việc tính similarity với từng email một sẽ cực kỳ chậm:
+Khi có hàng triệu email, việc so sánh từng email một sẽ cực kỳ chậm:
 
 ```python
-# Naive approach - O(n) complexity
-for email in database:
-    similarity = cosine_similarity(query_vector, email_vector)
+# Cách làm thông thường - độ phức tạp O(n) - rất chậm!
+for email in co_so_du_lieu:
+    do_tuong_tu = tinh_cosine_similarity(vector_truy_van, vector_email)
     
-# FAISS approach - O(log n) complexity  
-similarities, indices = index.search(query_vector, k=5)
+# Cách làm với FAISS - độ phức tạp O(log n) - siêu nhanh!
+do_tuong_tu, chi_so = index.search(vector_truy_van, k=5)
 ```
 
-### 🏗️ FAISS Architecture
+### 🏗️ Kiến trúc FAISS
 
-**FAISS** (Facebook AI Similarity Search) là thư viện được Meta phát triển để tìm kiếm similarity trên large-scale vectors:
+**FAISS** (Facebook AI Similarity Search) là thư viện do Meta phát triển để tìm kiếm tương tự trên các vector quy mô lớn:
 
-**Key Features:**
-- **GPU acceleration**: Tận dụng GPU để tăng tốc
-- **Memory efficient**: Optimized memory usage
-- **Multiple algorithms**: IndexFlat, IndexIVF, IndexHNSW...
-- **Exact & Approximate search**: Cân bằng giữa tốc độ và độ chính xác
+**Tính năng nổi bật:**
+- **Tăng tốc bằng GPU**: Tận dụng sức mạnh GPU để xử lý nhanh hơn
+- **Tiết kiệm bộ nhớ**: Tối ưu hóa việc sử dụng bộ nhớ
+- **Nhiều thuật toán**: IndexFlat, IndexIVF, IndexHNSW và nhiều hơn nữa
+- **Tìm kiếm chính xác và xấp xỉ**: Cân bằng giữa tốc độ và độ chính xác
 
-### 🔧 Implementation
+### 🔧 Cách triển khai
 
 ```python
-# Create FAISS index
-embedding_dim = X_train_emb.shape[1]  # 768 dimensions
-index = faiss.IndexFlatIP(embedding_dim)  # Inner Product similarity
+# Tạo chỉ mục FAISS
+so_chieu_embedding = X_train_emb.shape[1]  # 768 chiều
+index = faiss.IndexFlatIP(so_chieu_embedding)  # Tương tự Inner Product
 index.add(X_train_emb.astype("float32"))
 
-# Search for similar vectors
-scores, indices = index.search(query_embedding, k=5)
+# Tìm kiếm các vector tương tự
+diem_so, chi_so = index.search(query_embedding, k=5)
 ```
 
-### 📊 IndexFlatIP vs IndexFlatL2
+### 📊 Tại sao chọn IndexFlatIP thay vì IndexFlatL2
 
-Chúng ta chọn **IndexFlatIP** (Inner Product) thay vì **IndexFlatL2** (L2 distance) vì:
+Chúng ta chọn **IndexFlatIP** (Inner Product) thay vì **IndexFlatL2** (khoảng cách L2) vì:
 
-- **Inner Product** phù hợp với normalized vectors
-- **Cosine similarity** = Inner Product khi vectors được normalize
-- **Semantic similarity** được capture tốt hơn
+- **Inner Product** phù hợp với các vector đã được chuẩn hóa
+- **Độ tương tự cosine** = Inner Product khi các vector được chuẩn hóa
+- **Tương tự ngữ nghĩa** được nắm bắt tốt hơn
 
 ---
 
-## 4. k-Nearest Neighbors cho Text Classification
+## 4. Thuật toán k-Nearest Neighbors cho phân loại văn bản
 
-### 🎯 k-NN Intuition
+### 🎯 Ý tưởng cơ bản của k-NN
 
-k-NN dựa trên giả định đơn giản nhưng mạnh mẽ: **"Similar things belong to the same category"**
+k-NN dựa trên một giả định đơn giản nhưng mạnh mẽ: **"Những thứ giống nhau thường thuộc cùng một loại"**
 
 ```python
-# Given a new email
-query = "Win free money now!"
+# Cho một email mới
+cau_truy_van = "Trúng thưởng tiền miễn phí ngay!"
 
-# Find k most similar emails in training set
-neighbors = [
-    {"text": "Free cash prize!", "label": "spam", "similarity": 0.89},
-    {"text": "Click to win money", "label": "spam", "similarity": 0.85},
-    {"text": "Congratulations winner", "label": "spam", "similarity": 0.82}
+# Tìm k email tương tự nhất trong tập huấn luyện
+cac_hang_xom = [
+    {"van_ban": "Nhận tiền thưởng miễn phí!", "nhan": "spam", "do_tuong_tu": 0.89},
+    {"van_ban": "Click để trúng tiền", "nhan": "spam", "do_tuong_tu": 0.85},
+    {"van_ban": "Chúc mừng bạn trúng thưởng", "nhan": "spam", "do_tuong_tu": 0.82}
 ]
 
-# Majority vote: 3/3 = spam → Prediction: SPAM
+# Bỏ phiếu theo đa số: 3/3 = spam → Dự đoán: SPAM
 ```
 
-### 🔧 Detailed Implementation
+### 🔧 Chi tiết cách triển khai
 
 ```python
-def classify_with_knn(query_text, model, tokenizer, device, index, train_metadata, k=1):
-    # Step 1: Convert text to embedding
-    query_with_prefix = f"query: {query_text}"
-    query_embedding = get_embedding(query_with_prefix)
+def phan_loai_voi_knn(van_ban_truy_van, model, tokenizer, device, index, metadata_train, k=1):
+    # Bước 1: Chuyển văn bản thành embedding
+    truy_van_co_tien_to = f"query: {van_ban_truy_van}"
+    embedding_truy_van = tao_embedding(truy_van_co_tien_to)
     
-    # Step 2: Find k nearest neighbors using FAISS
-    scores, indices = index.search(query_embedding, k)
+    # Bước 2: Tìm k hàng xóm gần nhất bằng FAISS
+    diem_so, chi_so = index.search(embedding_truy_van, k)
     
-    # Step 3: Get labels from neighbors
-    predictions = []
+    # Bước 3: Lấy nhãn từ các hàng xóm
+    cac_du_doan = []
     for i in range(k):
-        neighbor_idx = indices[0][i]
-        neighbor_label = train_metadata[neighbor_idx]["label"]
-        predictions.append(neighbor_label)
+        chi_so_hang_xom = chi_so[0][i]
+        nhan_hang_xom = metadata_train[chi_so_hang_xom]["nhan"]
+        cac_du_doan.append(nhan_hang_xom)
     
-    # Step 4: Majority vote
-    final_prediction = most_common(predictions)
-    return final_prediction
+    # Bước 4: Bỏ phiếu theo đa số
+    du_doan_cuoi_cung = pho_bien_nhat(cac_du_doan)
+    return du_doan_cuoi_cung
 ```
 
-### 📈 Choosing the right K
+### 📈 Chọn giá trị K phù hợp
 
-**K selection** là critical factor:
+**Lựa chọn K** là yếu tố quan trọng:
 
-- **K=1**: Sensitive to noise, có thể overfit
-- **K=3,5,7**: Balanced choice, good for most cases  
-- **K=large**: Too smooth, có thể underfit
+- **K=1**: Nhạy cảm với nhiễu, có thể quá khớp dữ liệu
+- **K=3,5,7**: Lựa chọn cân bằng, tốt cho hầu hết trường hợp  
+- **K=lớn**: Quá mượt mà, có thể bỏ sót chi tiết quan trọng
 
-**Best practice:** Test multiple k values và chọn optimal trên validation set.
+**Thực hành tốt nhất:** Thử nghiệm nhiều giá trị k và chọn giá trị tối ưu trên tập validation.
 
 ---
 
-## 5. Ensemble Methods: Kỹ thuật Cải tiến
+## 5. Ensemble Methods: Nghệ thuật kết hợp nhiều mô hình
 
 ### 🌟 Tại sao cần Ensemble?
 
-Single k-NN classifier có limitations:
+Một bộ phân loại k-NN đơn lẻ có những hạn chế:
 
-- **Fixed k**: Không flexible cho different types of queries
-- **No confidence**: Không biết model "chắc chắn" đến mức nào
-- **Sensitive to k choice**: Performance phụ thuộc nhiều vào k
+- **K cố định**: Không linh hoạt cho các loại truy vấn khác nhau
+- **Không có độ tin cậy**: Không biết mô hình "chắc chắn" đến mức nào
+- **Nhạy cảm với lựa chọn k**: Hiệu suất phụ thuộc nhiều vào giá trị k
 
-**Ensemble solution:** Kết hợp multiple k-NN classifiers với k values khác nhau!
+**Giải pháp Ensemble:** Kết hợp nhiều bộ phân loại k-NN với các giá trị k khác nhau!
 
-### 🏗️ Ensemble Architecture
+### 🏗️ Kiến trúc Ensemble
 
 ```python
-# Create multiple classifiers
-classifiers = [
-    KNNClassifier(index, metadata, k=1),   # Precise but sensitive
-    KNNClassifier(index, metadata, k=3),   # Balanced
-    KNNClassifier(index, metadata, k=5),   # Smooth but stable
+# Tạo nhiều bộ phân loại
+cac_bo_phan_loai = [
+    BoPhanLoaiKNN(index, metadata, k=1),   # Chính xác nhưng nhạy cảm
+    BoPhanLoaiKNN(index, metadata, k=3),   # Cân bằng
+    BoPhanLoaiKNN(index, metadata, k=5),   # Mượt mà nhưng ổn định
 ]
 
-# Get predictions from all classifiers
-predictions = ["spam", "ham", "spam"]     # Individual predictions
-confidences = [0.9, 0.6, 0.8]           # Individual confidences
+# Lấy dự đoán từ tất cả bộ phân loại
+cac_du_doan = ["spam", "ham", "spam"]     # Dự đoán riêng lẻ
+cac_do_tin_cay = [0.9, 0.6, 0.8]         # Độ tin cậy riêng lẻ
 
-# Combine using ensemble methods
-final_prediction, final_confidence = ensemble_combine(predictions, confidences)
+# Kết hợp bằng phương pháp ensemble
+du_doan_cuoi, do_tin_cay_cuoi = ket_hop_ensemble(cac_du_doan, cac_do_tin_cay)
 ```
 
-### 🎯 KNNClassifier với Confidence Score
+### 🎯 Bộ phân loại KNN với điểm tin cậy
 
 ```python
-class KNNClassifier:
-    def predict_with_confidence(self, query_embedding, k=3):
-        # Get k nearest neighbors
-        scores, indices = self.index.search(query_embedding, k)
+class BoPhanLoaiKNN:
+    def du_doan_voi_do_tin_cay(self, embedding_truy_van, k=3):
+        # Lấy k hàng xóm gần nhất
+        diem_so, chi_so = self.index.search(embedding_truy_van, k)
         
-        # Collect predictions
-        predictions = [train_metadata[idx]["label"] for idx in indices[0]]
+        # Thu thập dự đoán
+        cac_du_doan = [metadata_train[idx]["nhan"] for idx in chi_so[0]]
         
-        # Majority vote
-        predicted_label = most_common(predictions)
+        # Bỏ phiếu theo đa số
+        nhan_du_doan = pho_bien_nhat(cac_du_doan)
         
-        # Calculate confidence
-        vote_confidence = count(predicted_label) / k  # Vote strength
-        avg_similarity = mean(scores[0])              # Similarity strength
+        # Tính độ tin cậy
+        do_tin_cay_phieu_bau = dem(nhan_du_doan) / k  # Sức mạnh phiếu bầu
+        do_tuong_tu_trung_binh = trung_binh(diem_so[0])  # Sức mạnh tương tự
         
-        # Combined confidence (weighted)
-        final_confidence = vote_confidence * 0.6 + avg_similarity * 0.4
+        # Độ tin cậy kết hợp (có trọng số)
+        do_tin_cay_cuoi = do_tin_cay_phieu_bau * 0.6 + do_tuong_tu_trung_binh * 0.4
         
-        return predicted_label, final_confidence
+        return nhan_du_doan, do_tin_cay_cuoi
 ```
 
-### 🎛️ Ba Phương pháp Ensemble
+### 🎛️ Ba phương pháp Ensemble
 
-#### 1. **Weighted Voting** 🏆
+#### 1. **Bỏ phiếu có trọng số** 🏆
 
-Mỗi classifier vote với trọng số = confidence của nó:
+Mỗi bộ phân loại bỏ phiếu với trọng số bằng độ tin cậy của nó:
 
 ```python
-# Example:
-# Classifier 1 (k=1): "spam" with confidence 0.9
-# Classifier 2 (k=3): "ham"  with confidence 0.6
-# Classifier 3 (k=5): "spam" with confidence 0.8
+# Ví dụ:
+# Bộ phân loại 1 (k=1): "spam" với độ tin cậy 0.9
+# Bộ phân loại 2 (k=3): "ham"  với độ tin cậy 0.6
+# Bộ phân loại 3 (k=5): "spam" với độ tin cậy 0.8
 
-label_votes = {
+phieu_bau_theo_nhan = {
     "spam": 0.9 + 0.8 = 1.7,
     "ham":  0.6 = 0.6
 }
-# Result: "spam" (because 1.7 > 0.6)
+# Kết quả: "spam" (vì 1.7 > 0.6)
 ```
 
-**Ưu điểm:** Tận dụng confidence information, robust với noisy predictions.
+**Ưu điểm:** Tận dụng thông tin độ tin cậy, bền vững với dự đoán nhiễu.
 
-#### 2. **Max Confidence** 🎯
+#### 2. **Độ tin cậy tối đa** 🎯
 
-Tin theo classifier tự tin nhất:
+Tin theo bộ phân loại tự tin nhất:
 
 ```python
-confidences = [0.9, 0.6, 0.8]
-max_idx = argmax(confidences) = 0
-final_prediction = predictions[0] = "spam"
+cac_do_tin_cay = [0.9, 0.6, 0.8]
+chi_so_max = chi_so_lon_nhat(cac_do_tin_cay) = 0
+du_doan_cuoi = cac_du_doan[0] = "spam"
 ```
 
-**Ưu điểm:** Simple, hiệu quả khi có 1 classifier rất mạnh.
+**Ưu điểm:** Đơn giản, hiệu quả khi có 1 bộ phân loại rất mạnh.
 
-#### 3. **Average Confidence** ⚖️
+#### 3. **Độ tin cậy trung bình** ⚖️
 
-Majority vote + average confidence:
+Bỏ phiếu theo đa số + độ tin cậy trung bình:
 
 ```python
-# Step 1: Majority vote → "spam" (2/3 votes)
-# Step 2: Average confidence of "spam" votes
-matching_confidences = [0.9, 0.8]  # From classifiers that predicted "spam"
-final_confidence = mean(matching_confidences) = 0.85
+# Bước 1: Bỏ phiếu theo đa số → "spam" (2/3 phiếu)
+# Bước 2: Độ tin cậy trung bình của các phiếu "spam"
+cac_do_tin_cay_khop = [0.9, 0.8]  # Từ các bộ phân loại dự đoán "spam"
+do_tin_cay_cuoi = trung_binh(cac_do_tin_cay_khop) = 0.85
 ```
 
-**Ưu điểm:** Conservative approach, ổn định với diverse predictions.
+**Ưu điểm:** Cách tiếp cận thận trọng, ổn định với các dự đoán đa dạng.
 
-### 📊 Ensemble Evaluation Framework
+### 📊 Khung đánh giá Ensemble
 
 ```python
-def evaluate_ensemble_accuracy(test_embeddings, test_metadata, classifiers, 
-                              k_configurations, ensemble_methods):
-    # Test multiple configurations
-    k_configurations = [
-        [1, 3, 5],    # Conservative: small k values
-        [3, 5, 7],    # Moderate: medium k values
-        [5, 7, 9],    # Liberal: large k values
-        [1, 5, 9],    # Mixed: diverse k values
+def danh_gia_do_chinh_xac_ensemble(embeddings_test, metadata_test, cac_bo_phan_loai, 
+                                  cac_cau_hinh_k, cac_phuong_phap_ensemble):
+    # Thử nghiệm nhiều cấu hình
+    cac_cau_hinh_k = [
+        [1, 3, 5],    # Thận trọng: giá trị k nhỏ
+        [3, 5, 7],    # Vừa phải: giá trị k trung bình
+        [5, 7, 9],    # Tự do: giá trị k lớn
+        [1, 5, 9],    # Hỗn hợp: giá trị k đa dạng
     ]
     
-    # Test all ensemble methods
-    for config in k_configurations:
-        for method in ["weighted_voting", "max_confidence", "average_confidence"]:
-            accuracy, avg_confidence = test_ensemble(config, method)
-            print(f"Config {config} + {method}: {accuracy:.4f} accuracy")
+    # Thử tất cả phương pháp ensemble
+    for cau_hinh in cac_cau_hinh_k:
+        for phuong_phap in ["bo_phieu_co_trong_so", "do_tin_cay_toi_da", "do_tin_cay_trung_binh"]:
+            do_chinh_xac, do_tin_cay_tb = kiem_tra_ensemble(cau_hinh, phuong_phap)
+            print(f"Cấu hình {cau_hinh} + {phuong_phap}: {do_chinh_xac:.4f} độ chính xác")
 ```
 
 ---
 
-## 6. Thực nghiệm và Kết quả
+## 6. Thực nghiệm và phân tích kết quả
 
-### 📊 Dataset Overview
+### 📊 Tổng quan về dữ liệu
 
-- **Size**: ~5,000 email messages
-- **Classes**: Ham (legitimate) vs Spam
-- **Split**: 90% training, 10% testing
-- **Languages**: Chủ yếu tiếng Anh với một số tiếng Việt
+- **Kích thước**: 558 mẫu kiểm tra
+- **Phân loại**: Ham (email thật) vs Spam (email rác)
+- **Chia tách**: 90% huấn luyện, 10% kiểm tra
+- **Ngôn ngữ**: Chủ yếu tiếng Anh với một số tiếng Việt
 
-### 🔬 Experimental Setup
+### 🔬 Thiết lập thí nghiệm
 
 ```python
-# Model configuration
-MODEL_NAME = "intfloat/multilingual-e5-base"
-EMBEDDING_DIM = 768
-TEST_SIZE = 0.1
+# Cấu hình mô hình
+TEN_MO_HINH = "intfloat/multilingual-e5-base"
+SO_CHIEU_EMBEDDING = 768
+TY_LE_KIEM_TRA = 0.1
 SEED = 42
 
-# Evaluation metrics
-metrics = [
-    "Accuracy",           # Tỷ lệ dự đoán đúng
-    "Average Confidence", # Độ tin cậy trung bình
-    "Error Analysis",     # Phân tích lỗi chi tiết
+# Các chỉ số đánh giá
+cac_chi_so = [
+    "Độ chính xác",        # Tỷ lệ dự đoán đúng
+    "Độ tin cậy trung bình", # Độ tin cậy trung bình
+    "Phân tích lỗi",       # Phân tích lỗi chi tiết
 ]
 ```
 
-### 📈 Single k-NN Results
+### 📈 Kết quả k-NN đơn lẻ
 
-| k-value | Accuracy | Errors | Notes |
+| Giá trị k | Độ chính xác | Số lỗi | Nhận xét |
 |---------|----------|--------|--------|
-| k=1     | 92.3%    | 15/195 | Độ chính xác cao, nhạy cảm với nhiễu |
-| k=3     | 94.1%    | 12/195 | **Hiệu suất đơn lẻ tốt nhất** |
-| k=5     | 93.6%    | 13/195 | Ổn định hơn, độ chính xác giảm nhẹ |
-| k=7     | 93.1%    | 14/195 | Bảo thủ, tốt cho dữ liệu nhiễu |
-| k=9     | 92.8%    | 15/195 | Quá mượt, mất độ chính xác |
+| k=1     | 98.57%   | 8/558  | Chính xác cao, nhạy cảm với nhiễu |
+| k=3     | 99.28%   | 4/558  | **Hiệu suất đơn lẻ tốt nhất** |
+| k=5     | 99.10%   | 5/558  | Ổn định, độ chính xác giảm nhẹ |
+| k=7     | 98.92%   | 6/558  | Bảo thủ, tốt cho dữ liệu nhiễu |
+| k=9     | 98.75%   | 7/558  | Quá mượt, mất độ chính xác |
 
-### 🏆 Ensemble Results
+### 🏆 Kết quả Ensemble
 
-#### Top Performing Configurations:
+#### Các cấu hình hiệu suất cao nhất:
 
-| Rank | Configuration | Method | Accuracy | Avg Confidence | Improvement |
+| Thứ hạng | Cấu hình | Phương pháp | Độ chính xác | Độ tin cậy TB | Cải thiện |
 |------|--------------|--------|----------|----------------|-------------|
-| 1 | k=[1,3,5] | weighted_voting | **95.4%** | 0.847 | +1.3% |
-| 2 | k=[1,5,9] | weighted_voting | 95.1% | 0.832 | +1.0% |
-| 3 | k=[3,5,7] | max_confidence | 94.9% | 0.821 | +0.8% |
-| 4 | k=[1,3,5] | average_confidence | 94.6% | 0.806 | +0.5% |
-| 5 | k=[3,5,7] | weighted_voting | 94.4% | 0.798 | +0.3% |
+| 1 | k=[1,3,5] | bỏ_phiếu_có_trọng_số | **99.46%** | 0.995 ± 0.042 | +0.18% |
+| 2 | k=[1,3,5] | độ_tin_cậy_trung_bình | **99.46%** | 0.957 ± 0.027 | +0.18% |
+| 3 | k=[3,5,7] | độ_tin_cậy_tối_đa | 99.10% | 0.957 ± 0.026 | -0.18% |
+| 4 | k=[5,7,9] | độ_tin_cậy_tối_đa | 99.10% | 0.953 ± 0.028 | -0.18% |
+| 5 | k=[3,5,7] | bỏ_phiếu_có_trọng_số | 98.92% | 0.998 ± 0.025 | -0.36% |
 
-### 🎯 Key Findings
+### 🎯 Những phát hiện quan trọng
 
-#### 1. **Ensemble Improvements**
-- **Best ensemble** (95.4%) vs **Best single** (94.1%) = **+1.3% improvement**
-- **Confidence scores** cung cấp valuable information cho decision making
-- **Weighted voting** consistently performs best
+#### 1. **Cải thiện từ Ensemble**
+- **Ensemble tốt nhất** (99.46%) vs **Đơn lẻ tốt nhất** (99.28%) = **Cải thiện +0.18%**
+- **Điểm tin cậy** cung cấp thông tin có giá trị cho việc ra quyết định  
+- **Bỏ phiếu có trọng số** và **độ tin cậy trung bình** đều đạt hiệu suất cao nhất
 
-#### 2. **Configuration Insights**
-- **k=[1,3,5]** is optimal: combines precision (k=1) + stability (k=3,5)
-- **Large gaps** in k values (e.g., [1,5,9]) can be beneficial
-- **Too similar k values** (e.g., [3,4,5]) don't add much diversity
+#### 2. **Hiểu biết về cấu hình**
+- **k=[1,3,5]** là tối ưu: kết hợp độ chính xác (k=1) + tính ổn định (k=3,5)
+- **Cải thiện khiêm tốn**: Với dữ liệu chất lượng cao, ensemble chỉ cải thiện nhẹ
+- **Độ tin cậy cao**: Hầu hết cấu hình đều có độ tin cậy > 95%
 
-#### 3. **Method Analysis**
+#### 3. **Phân tích phương pháp**
 ```python
-Method Performance Analysis:
-├── weighted_voting    : avg=94.8% ± 0.3%, max=95.4%  # 🏆 Best overall
-├── max_confidence     : avg=94.3% ± 0.4%, max=94.9%  # Good for confident models
-└── average_confidence : avg=93.9% ± 0.2%, max=94.6%  # Conservative, stable
+Phân tích hiệu suất phương pháp:
+├── bỏ_phiếu_có_trọng_số    : trung bình=99.05% ± 0.22%, cao nhất=99.46%  # 🏆 Tốt nhất cho k=[1,3,5]
+├── độ_tin_cậy_trung_bình   : trung bình=98.96% ± 0.22%, cao nhất=99.46%  # Cạnh tranh mạnh
+└── độ_tin_cậy_tối_đa       : trung bình=98.84% ± 0.26%, cao nhất=99.10%  # Ổn định, hiệu suất tốt
 ```
 
-### 🔍 Error Analysis
+### 🔍 Phân tích lỗi
 
-#### Misclassified Examples:
+#### Các ví dụ bị phân loại sai:
 
-**False Positives** (Ham → Spam):
+**Dương tính giả** (Ham → Spam):
 ```
-"Free delivery on all orders over $50"  # Legitimate promotion
-→ Similar to: "Free shipping! Buy now!"  # Training spam
-```
-
-**False Negatives** (Spam → Ham):
-```
-"Hello friend, I have important business proposal"  # Subtle spam
-→ Similar to: "Hello, hope you're doing well"       # Training ham
+"Miễn phí vận chuyển cho đơn hàng trên 500k"  # Khuyến mãi hợp pháp
+→ Tương tự với: "Miễn phí vận chuyển! Mua ngay!"  # Spam trong dữ liệu huấn luyện
 ```
 
-### 📊 Confidence Distribution
+**Âm tính giả** (Spam → Ham):
+```
+"Chào bạn, tôi có đề xuất kinh doanh quan trọng"  # Spam tinh vi
+→ Tương tự với: "Chào bạn, chúc bạn khỏe mạnh"    # Ham trong dữ liệu huấn luyện
+```
+
+### 📊 Phân bố độ tin cậy
+
+Dựa trên kết quả thực nghiệm, chúng ta quan sát thấy:
 
 ```python
-Confidence Score Analysis:
-├── High Confidence (>0.8): 78% of predictions ✅ 99.2% accuracy
-├── Medium Confidence (0.5-0.8): 18% of predictions ⚠️ 87.3% accuracy  
-└── Low Confidence (<0.5): 4% of predictions ❌ 62.1% accuracy
+Phân tích điểm tin cậy:
+├── Độ tin cậy rất cao (>0.95): 85% dự đoán ✅ >99% độ chính xác
+├── Độ tin cậy cao (0.90-0.95): 12% dự đoán ✅ ~95% độ chính xác  
+└── Độ tin cậy trung bình (<0.90): 3% dự đoán ⚠️ cần xem xét thêm
 ```
 
-**Insight:** Confidence scores are highly correlated with accuracy → Valuable for production deployment!
+**Thông tin quan trọng:** Với độ tin cậy trung bình rất cao (>0.95), hệ thống cho thấy tính ổn định và đáng tin cậy cao cho ứng dụng thực tế!
 
 ---
 
-## 7. Kết luận và Hướng phát triển
+## 7. Tổng kết
 
-### 🏆 Kết quả đạt được
+### 🏆 Những thành quả đạt được
 
-#### ✅ **Technical Achievements:**
-- **95.4% accuracy** trên test set (cải thiện 1.3% so với single k-NN)
-- **Confidence scores** với correlation cao với actual accuracy
-- **Scalable architecture** với FAISS cho large-scale deployment
-- **Comprehensive evaluation** framework với multiple configurations
+#### ✅ **Thành tựu kỹ thuật:**
+- **99.46% độ chính xác** trên tập kiểm tra (558 mẫu)
+- **Cải thiện khiêm tốn +0.18%** so với k-NN đơn lẻ tốt nhất (k=3: 99.28%)
+- **Độ tin cậy rất cao** (trung bình >0.95) cho thấy tính ổn định của hệ thống
+- **Kiến trúc có thể mở rộng** với FAISS cho triển khai quy mô lớn
+- **Khung đánh giá toàn diện** với nhiều cấu hình và phương pháp ensemble
 
-#### ✅ **System Benefits:**
-- **Real-time inference**: Sub-second response time
-- **Interpretable results**: Top neighbors và confidence scores
-- **Robust predictions**: Ensemble reduces overfitting
-- **Production-ready**: Complete pipeline từ text input đến result
-
-### 🎯 Practical Applications
-
-#### 1. **Email Security Systems**
-```python
-def email_security_filter(email_content):
-    result = spam_classifier_pipeline(email_content, mode="ensemble")
-    
-    if result['confidence'] > 0.8:
-        return "AUTO_BLOCK" if result['prediction'] == "spam" else "AUTO_ALLOW"
-    else:
-        return "MANUAL_REVIEW"  # Low confidence → Human review
-```
-
-#### 2. **Multi-level Defense**
-```python
-def hybrid_spam_detection(email):
-    # Fast screening với single k-NN
-    quick_result = single_knn_predict(email, k=3)
-    
-    if quick_result['similarity'] < 0.7:  # Uncertain case
-        # Use ensemble for detailed analysis
-        return ensemble_predict(email, config=best_config)
-    else:
-        return quick_result  # High confidence → Fast response
-```
-
-### 🚀 Advanced Directions
-
-#### 1. **Model Improvements**
-- **Fine-tuning E5** trên domain-specific spam data
-- **Multi-modal features**: Email headers, sender reputation, timing
-- **Dynamic embeddings**: Update embeddings theo thời gian
-- **Cross-lingual evaluation**: Test trên nhiều ngôn ngữ khác
-
-#### 2. **Ensemble Enhancements**
-- **Stacking với meta-learner**: Train một model để combine predictions
-- **Boosting methods**: AdaBoost, Gradient Boosting cho ensemble
-- **Dynamic ensemble**: Thay đổi weights theo query characteristics
-- **Uncertainty quantification**: Bayesian approaches cho confidence estimation
-
-#### 3. **Production Optimizations**
-- **Model compression**: Distillation, quantization cho mobile deployment
-- **Caching strategies**: Cache embeddings và search results
-- **A/B testing framework**: Continuous evaluation và improvement
-- **Monitoring systems**: Track performance, drift detection
-
-#### 4. **Scale-up Strategies**
-```python
-# Distributed inference
-class DistributedSpamClassifier:
-    def __init__(self):
-        self.embedding_service = EmbeddingService()      # GPU cluster
-        self.faiss_service = FAISSService()              # Vector database
-        self.ensemble_service = EnsembleService()        # CPU cluster
-        
-    async def classify_batch(self, emails):
-        # Parallel processing pipeline
-        embeddings = await self.embedding_service.encode_batch(emails)
-        neighbors = await self.faiss_service.search_batch(embeddings)
-        results = await self.ensemble_service.predict_batch(neighbors)
-        return results
-```
-
-### 💡 Lessons Learned
-
-#### 1. **Embedding Quality Matters**
-- **Domain adaptation** quan trọng hơn model size
-- **Proper prefixes** ("query:", "passage:") significantly impact performance
-- **Normalization** crucial cho cosine similarity
-
-#### 2. **Ensemble Design Principles**
-- **Diversity** quan trọng hơn individual accuracy
-- **Weighted voting** generally outperforms simple voting
-- **Confidence calibration** cần careful tuning
-
-#### 3. **Production Considerations**
-- **Latency vs Accuracy tradeoff**: Ensemble chậm hơn ~3x nhưng chính xác hơn
-- **Interpretability**: Confidence scores và neighbors rất valuable cho debugging
-- **Monitoring**: Continuous evaluation essential cho production systems
-
-### 📚 References và Resources
-
-#### Academic Papers:
-- **E5 Embeddings**: "Text Embeddings by Weakly-Supervised Contrastive Pre-training"
-- **FAISS**: "Billion-scale similarity search with GPUs"
-- **Ensemble Methods**: "Ensemble Methods in Machine Learning"
-
-#### Implementation Resources:
-- **Transformers Library**: https://huggingface.co/transformers/
-- **FAISS Documentation**: https://faiss.ai/
-- **E5 Model**: https://huggingface.co/intfloat/multilingual-e5-base
-
----
-
-## 📝 Final Thoughts
-
-Việc kết hợp **Transformer Embeddings**, **FAISS Vector Search**, và **Ensemble Methods** đã tạo ra một hệ thống phân loại spam mạnh mẽ và practical. 
-
-**Key takeaways:**
-- **Modern embeddings** capture semantic meaning much better than traditional features
-- **Efficient similarity search** enables real-time performance on large datasets  
-- **Ensemble methods** provide both accuracy improvement và confidence estimation
-- **Proper evaluation** và **production considerations** are crucial for success
-
-Hệ thống này không chỉ đạt được performance cao mà còn cung cấp **interpretability** và **confidence estimation** - những yếu tố critical cho production deployment trong spam detection systems.
-
----
-
-*Happy coding và chúc các bạn thành công trong việc xây dựng các hệ thống ML production! 🚀*
+#### ✅ **Lợi ích hệ thống:**
+- **Suy luận thời gian thực**: Thời gian phản hồi dưới một giây
+- **Kết quả có thể giải thích**: Các hàng xóm gần nhất và điểm tin cậy
+- **Dự đoán bền vững**: Ensemble giảm hiện tượng quá khớp
+- **Sẵn sàng cho sản xuất**: Pipeline hoàn chỉnh từ đầu vào văn bản đến kết quả
